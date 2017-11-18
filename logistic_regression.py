@@ -28,7 +28,7 @@ def newton_method(w, x, y):
     w -= np.dot(np.linalg.inv(hessian), gradient)
 
 
-def log_likelihood(x, y, w):
+def loss_function(x, y, w):
     scores = np.dot(x, w)
     predictions = sigmoid(scores)
     ll = - np.sum((1 - y) * np.log(1 - predictions) + y * np.log(predictions))
@@ -37,10 +37,13 @@ def log_likelihood(x, y, w):
 
 def logistic_regression(x, y, learning_rate):
     w = np.zeros(x.shape[1]).reshape(x.shape[1], 1)
-    ll = log_likelihood(x, y, w)
+    ll = loss_function(x, y, w)
+
     change_ratio = 1
 
     while change_ratio > 0.3:
+        old_w = np.copy(w)
+
         scores = np.dot(x, w)
         predictions = sigmoid(scores)
         output_error = predictions - y
@@ -58,12 +61,30 @@ def logistic_regression(x, y, learning_rate):
             w -= np.dot(np.linalg.inv(hessian), gradient)
             print("Newton's method")
 
-        tmp_ll = log_likelihood(x, y, w)
-        print("\tLog-Likelihood:", tmp_ll)
-        change_ratio = np.abs(ll - tmp_ll) / ll
-        ll = tmp_ll
+        distance = np.linalg.norm(w - old_w)
+        change_ratio = distance / np.linalg.norm(w)
+        print("w changes ratio:", change_ratio)
 
     return w
+
+
+def confusion_matrix(preds, y):
+    TP = 0
+    TN = 0
+    FP = 0
+    FN = 0
+    for i in range(len(y)):
+        if preds[i] == 0:
+            if y[i] == 0:
+                TN += 1
+            else:
+                FN += 1
+        else:
+            if y[i] == 1:
+                TP += 1
+            else:
+                FP += 1
+    return TP, TN, FP, FN
 
 
 if __name__ == "__main__":
@@ -114,9 +135,19 @@ if __name__ == "__main__":
     final_scores = np.dot(x, w)
     preds = np.round(sigmoid(final_scores))
 
+    print("-------------------")
     print("Accuracy:", (preds == y).sum().astype(float) / len(y) * 100, "%")
 
     plt.scatter(x[:, 0], x[:, 1], c=np.squeeze(y), alpha=0.8, s=4)
     plt.show()
     plt.scatter(x[:, 0], x[:, 1], c=np.squeeze((preds == y)), alpha=0.8, s=4)
     plt.show()
+
+    TP, TN, FP, FN = confusion_matrix(preds, y)
+    print("confusion matrix:")
+    print("\tTrue Positive:", TP)
+    print("\tTrue Negative:", TN)
+    print("\tFalse Positive:", FP)
+    print("\tFalse Negative:", FN)
+    print("Sensitivity:", TP / (TP + FN))
+    print("Specificity:", TN / (TN + FP))
